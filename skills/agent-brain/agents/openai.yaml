@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Brain · 多 Agent 统筹"
+  short_description: "按各 Agent 的能力与局限统一分工，兼顾质量、效率和完整任务成本"
+  default_prompt: "使用 $agent-brain，根据可用 Agent 的能力、局限和额度安排分工，执行并验收任务；仅在值得时并行或升级模型。"
+policy:
+  allow_implicit_invocation: true
