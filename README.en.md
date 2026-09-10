@@ -4,7 +4,42 @@
 
 A central coordination skill for Codex and other agents that support `SKILL.md`. Short name: **Agent Brain**.
 
-Agent Brain assigns work according to each agent's capabilities and limitations, balancing cost and efficiency while meeting delivery requirements. The title describes an optimization goal, not a guarantee of mathematically minimal cost or maximal efficiency. Costs include the coordinator, workers, context transfer, acceptance checks, and retries. Simple tasks use one executor by default; delegation or parallel work is justified only when the benefits outweigh the overhead.
+Our goal is to reduce quota consumption and completion time while meeting task quality requirements. Results vary with the task, models, and available quota. Costs include the coordinator, workers, context transfer, acceptance checks, and retries. Simple tasks use one executor by default; delegation or parallel work is justified only when the benefits outweigh the overhead.
+
+## Our operating method
+
+Agent Brain follows this workflow: **define delivery → select an executor → prepare a concise handoff → dispatch → repair the specific problem → accept and account**. Procedures, input formats, and examples live in this repository; using the skill does not require reading upstream projects.
+
+| Stage | Concrete action | Result |
+| --- | --- | --- |
+| Select | Check capabilities, channel, quality requirements, and shared quotas before comparing whole-task costs; use explicit preferences when costs are not comparable | Selected agent, model, channel, pool, and reasons for excluding alternatives |
+| Prepare | Preserve objectives, acceptance, permissions, errors, and file scope; summarize successful logs and retrieve relevant code sections | An actionable task packet with retrievable original evidence |
+| Dispatch | Feed research into implementation; sequence dependencies and isolate independent writes | Session IDs, execution state, file ownership, and returned results |
+| Repair | Restore missing context, resolve access issues, or escalate only the subproblem that needs stronger reasoning | Completed work retained instead of restarting the entire task on a more expensive model |
+| Accept and account | Check delivery, then account for coordination, execution, review, and retries; retain unknown measurements | Known consumption grouped by task, model, pool, and unit to inform future selection |
+
+For a monetary rounding bug, send the failing example, relevant code, and allowed files to a suitable coding agent. Other agents need not participate. If a currency rule requires deeper reasoning, send that question and evidence to an appropriate model, return the finding to the implementation session, and have the coordinator check acceptance.
+
+These procedures are implemented in the [skill instructions](skills/agent-brain/SKILL.md) and [operating playbook](skills/agent-brain/references/operating-playbook.md). Start with the [capability and limitation table](skills/agent-brain/references/agent-routing.md), then adjust assignments using actual task outcomes.
+
+## Implemented local helpers
+
+`brain.py` uses the Python 3.10+ standard library, requires no third-party dependencies, and makes no model requests. Run these commands from the repository root:
+
+```sh
+# Select from fictional profiles: returns demo-terra with exclusion reasons
+python skills/agent-brain/scripts/brain.py plan skills/agent-brain/assets/demo.plan.json
+
+# Account for fictional events: unknown costs stay null; models and pools stay separate
+python skills/agent-brain/scripts/brain.py account skills/agent-brain/assets/demo.usage.json
+
+# Extract evidence from an existing local UTF-8 log; replace 1 with its real exit code
+python skills/agent-brain/scripts/brain.py digest work/raw.log --exit-code 1
+```
+
+The fixtures are offline examples, not evidence of real connections, capabilities, or remaining quota. For real work, the coordinator supplies verified channel observations and task requirements, runs selection, then dispatches through available agent tools. `plan` itself does not dispatch work.
+
+The log helper returns a source path, hash, line numbers, exit state, and omission indicators. Incomplete failure evidence requires source review. Accounting rejects duplicate events, cumulative counters, and parent totals containing child calls. See the [playbook](skills/agent-brain/references/operating-playbook.md) for all three input contracts.
 
 ## What it does
 
@@ -17,7 +52,7 @@ Agent Brain assigns work according to each agent's capabilities and limitations,
 - Selects execution methods by capability and cost, and stops ineffective retries when quota exhaustion is confirmed.
 - Separates cash spending, estimated costs, subscription quota, and time, without promising a fixed savings percentage.
 
-This skill guides agent decisions. **It is not a dispatch service with all desktop applications already connected.** It does not independently install tools, create accounts, purchase credits, run background monitoring, or acquire additional permissions. Model capabilities, quotas, and billing rules must be verified in the actual environment; specific model generations and prices are not hardcoded.
+The skill includes dispatch instructions and local helper code; actual execution uses the coordinator's available tools. **Desktop connections and a persistent background service still require suitable adapters.** Model capabilities, quotas, and billing rules come from the actual environment.
 
 ## Installation and usage
 
@@ -33,8 +68,8 @@ Load skill instructions as needed and consult the relevant references for routin
 
 ## Validation scope
 
-The skill format, relative links, and publication files were checked. An independent Luna worker also completed a decision evaluation covering six simulated dispatch scenarios. See the [evaluation scenarios](evaluations/scenarios.md) and [recorded results](evaluations/results.md). These checks do not establish an actual savings percentage or prove that an external application is connected.
+The helper code includes 15 automated tests covering capability filtering, shared quotas, explicit model choices, stale observations, whole-task cost ranking, failure evidence, and duplicate accounting. Run `python evaluations/test_brain.py`. An independent Luna worker also completed six simulated dispatch decisions; see the [scenarios](evaluations/scenarios.md) and [evaluation record](evaluations/results.md). These check logic and behavior; actual savings require measurement on real tasks.
 
 ## Sources and license
 
-The content is an independently written synthesis of methods, without copying upstream implementations or substantial prompt text. See [sources and applicability limits](SOURCES.md) (Chinese). Original content in this repository is licensed under MIT; upstream projects retain their respective licenses.
+The operating procedure, Python helpers, and tests were written for this project. [Design decisions and references](SOURCES.md) (Chinese) maps the ideas that informed specific implementations. Using this skill does not depend on those upstream projects. Original content is MIT licensed; upstream projects retain their respective licenses.

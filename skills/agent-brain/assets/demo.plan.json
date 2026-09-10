@@ -1,0 +1,79 @@
+{
+  "note": "FICTIONAL OFFLINE DEMO. These are not real model IDs, quotas, capability claims, or live credentials. Replace all observations before real routing.",
+  "task": {
+    "type": "coding",
+    "requires": [
+      "local-edit"
+    ],
+    "min_tier": 2
+  },
+  "reserve_percent": 20,
+  "pools": {
+    "demo-codex": {
+      "remaining_percent": 60,
+      "valid_until": "2099-01-01T00:00:00Z",
+      "identity_verified": true
+    },
+    "demo-google": {
+      "remaining_percent": 0,
+      "valid_until": "2099-01-01T00:00:00Z",
+      "identity_verified": true
+    }
+  },
+  "agents": [
+    {
+      "id": "demo-luna",
+      "channel": "native",
+      "model": "example-luna",
+      "effort": "low",
+      "pool": "demo-codex",
+      "authorized": true,
+      "status": "task-tested",
+      "valid_until": "2099-01-01T00:00:00Z",
+      "capabilities": [
+        "local-edit"
+      ],
+      "task_types": [
+        "coding"
+      ],
+      "tier": 1,
+      "preference_rank": 1
+    },
+    {
+      "id": "demo-terra",
+      "channel": "native",
+      "model": "example-terra",
+      "effort": "medium",
+      "pool": "demo-codex",
+      "authorized": true,
+      "status": "task-tested",
+      "valid_until": "2099-01-01T00:00:00Z",
+      "capabilities": [
+        "local-edit"
+      ],
+      "task_types": [
+        "coding"
+      ],
+      "tier": 2,
+      "preference_rank": 2
+    },
+    {
+      "id": "demo-gemini",
+      "channel": "cli",
+      "model": "example-gemini",
+      "effort": "low",
+      "pool": "demo-google",
+      "authorized": true,
+      "status": "task-tested",
+      "valid_until": "2099-01-01T00:00:00Z",
+      "capabilities": [
+        "local-edit"
+      ],
+      "task_types": [
+        "coding"
+      ],
+      "tier": 2,
+      "preference_rank": 1
+    }
+  ]
+}

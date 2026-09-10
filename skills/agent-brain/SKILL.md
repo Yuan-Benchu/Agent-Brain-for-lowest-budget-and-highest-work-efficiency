@@ -9,6 +9,8 @@ Choose agents that can deliver the required result with acceptable quality, late
 
 ## Dispatch by capability, not brand
 
+For concrete execution, read [operating-playbook.md](references/operating-playbook.md): task definition → eligible agent selection → minimal packet → actual dispatch → targeted repair → acceptance and accounting. Use `scripts/brain.py plan` for repeatable selection, `digest` for long local logs, and `account` for reported usage events. The helpers use the Python standard library and make no model calls; plan output is not execution. For authorized tasks, continue using the real available adapter after planning.
+
 For multi-agent work or a new channel, read [agent-routing.md](references/agent-routing.md). Inventory each reachable executor's strengths, weaknesses, tools, data access, authentication, exact model, effort, quota pool, observed outcomes, and freshness. Treat model-family role suggestions as starting hypotheses; update them from actual accepted tasks.
 
 Eliminate candidates missing required access, tools, quality, or authorization before comparing cost. Do not substitute a CLI for a requested desktop session, or an API for a subscription channel, without making that change explicit and respecting user intent. A model response test proves neither desktop access nor file-editing success.

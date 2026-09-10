@@ -1,0 +1,62 @@
+{
+  "note": "FICTIONAL per-call deltas, not measured savings. Include every applicable phase in real accounting.",
+  "entries": [
+    {
+      "task_id": "demo-fix",
+      "event_id": "dispatch-1",
+      "phase": "coordinator",
+      "agent": "native/example-luna/low",
+      "pool": "demo-codex",
+      "counter_mode": "delta",
+      "metrics": {
+        "input_tokens": {
+          "value": 200,
+          "unit": "token"
+        },
+        "estimated_cost": {
+          "value": null,
+          "unit": "USD"
+        }
+      },
+      "scope": "own_call"
+    },
+    {
+      "task_id": "demo-fix",
+      "event_id": "implementation-1",
+      "phase": "worker",
+      "agent": "native/example-terra/medium",
+      "pool": "demo-codex",
+      "counter_mode": "delta",
+      "metrics": {
+        "input_tokens": {
+          "value": 1200,
+          "unit": "token"
+        },
+        "estimated_cost": {
+          "value": null,
+          "unit": "USD"
+        }
+      },
+      "scope": "own_call"
+    },
+    {
+      "task_id": "demo-fix",
+      "event_id": "acceptance-1",
+      "phase": "acceptance",
+      "agent": "native/example-luna/low",
+      "pool": "demo-codex",
+      "counter_mode": "delta",
+      "metrics": {
+        "input_tokens": {
+          "value": 150,
+          "unit": "token"
+        },
+        "estimated_cost": {
+          "value": null,
+          "unit": "USD"
+        }
+      },
+      "scope": "own_call"
+    }
+  ]
+}

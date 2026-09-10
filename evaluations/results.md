@@ -14,3 +14,22 @@ An independent Codex Luna worker read the skill and its references, without read
 The evaluator found no mandatory skill defect. It identified task-specific details that still need resolution in real work: CSV column collision handling and the exact desktop connector capability/acceptance boundary. The skill's task requirements and capability checks cover where to resolve these details.
 
 This is a small qualitative decision check, not a live adapter integration test or a cost benchmark. Six acceptable decisions do not establish a general success rate or savings percentage. Skill frontmatter passed the skill-creator validator. Relative document links and the publication file list were also checked.
+
+## Executable mechanisms added — 2026-09-10
+
+Added original standard-library helpers for candidate selection, traceable log
+excerpts, and per-call usage accounting, plus an operational playbook and fictional
+input fixtures. No provider requests are made by these helpers.
+
+`python evaluations/test_brain.py` passes 15 offline tests. They exercise quality
+and capability gates, shared exhaustion, explicit model choices, unknown/stale
+observations, comparable total-cost selection, reserve handling, preservation of
+failed exit state, incomplete evidence flags, model/pool separation, unknown
+costs, and rejection of duplicate/cumulative/aggregate events.
+
+An independent Luna code review prompted explicit verified pool identities,
+own-call-only accounting, and source-review flags for incomplete failure excerpts.
+Registry observations and accounting scope still depend on truthful inputs; the
+helpers do not discover hidden shared pools or mislabeled overlapping totals.
+These tests establish behavior for the tested inputs, not real-provider savings
+or end-to-end desktop integration.
