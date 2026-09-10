@@ -1,4 +1,4 @@
-# Agent Brain for lowest budget and highest work efficiency
+# Agent Brain -- lowest budget and highest work efficiency
 
 **简体中文** | [English](README.en.md)
 
