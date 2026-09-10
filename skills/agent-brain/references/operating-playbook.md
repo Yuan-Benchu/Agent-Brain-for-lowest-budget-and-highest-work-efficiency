@@ -2,8 +2,9 @@
 
 Use this reference to turn a task into actual work, especially for the first task
 in a project. No upstream repository is required to follow this procedure.
-The coordinator executes the workflow with available tools. The helper computes
-decisions and excerpts locally; it does not itself submit work to providers.
+The coordinator executes the workflow with available tools. `brain.py` computes
+decisions and excerpts locally. For actual one-shot Claude Code or Grok text
+execution, use `dispatch.py` as described in [dispatch-cli.md](dispatch-cli.md).
 
 ## 1. Define the job before selecting a model
 
@@ -98,6 +99,11 @@ or no recognized failure keywords, `needs_source_review` is true. Inspect the
 original source before diagnosing; a keyword filter cannot identify every cause.
 
 ## 4. Run the work through the actual available channel
+
+Before each new assignment or model switch, tell the user which model/channel
+will do which part and why, using plain language. This is an advance progress
+notice, not repeated permission-seeking for already authorized work. Report the
+actual participating models and outcome afterward.
 
 Map the packet to the host's native subagent tool or the installed CLI/ACP's
 documented prompt input. Preserve the selected channel, model, effort and

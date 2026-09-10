@@ -5,11 +5,15 @@ description: Coordinate multiple AI agents by capability, limitations, model, qu
 
 # Agent Brain
 
-Choose agents that can deliver the required result with acceptable quality, latency, and total cost. Exploit complementary capabilities without multiplying unnecessary calls. Preserve the user's chosen tools, scope, and authorization. This skill supplies operational decisions, not new integrations or a background scheduler.
+Choose agents that can deliver the required result with acceptable quality, latency, and total cost. Exploit complementary capabilities without multiplying unnecessary calls. Preserve the user's chosen tools, scope, and authorization. This skill supplies operational decisions and bounded CLI helpers; it does not run a background scheduler.
 
 ## Dispatch by capability, not brand
 
+Before starting work, tell the user in their language which model/channel will do which part and why, using one or two plain sentences. For example: “I'll use Claude Code Sonnet to check the English instructions, and Grok to check the Chinese instructions. I'll combine their findings.” State actual model identifiers when known; otherwise identify the current coordinator without inventing its model. Distinguish a proposed assignment from a completed call. Announce a model switch or added worker before it runs. This is a progress notice, not a new approval request; continue within existing authorization. Afterward, report which models actually ran and what they completed or failed to complete. If working directly without other models, say so briefly.
+
 For concrete execution, read [operating-playbook.md](references/operating-playbook.md): task definition → eligible agent selection → minimal packet → actual dispatch → targeted repair → acceptance and accounting. Use `scripts/brain.py plan` for repeatable selection, `digest` for long local logs, and `account` for reported usage events. The helpers use the Python standard library and make no model calls; plan output is not execution. For authorized tasks, continue using the real available adapter after planning.
+
+For one-shot text tasks through installed Claude Code or Grok CLI, read [dispatch-cli.md](references/dispatch-cli.md) and use `scripts/dispatch.py` to execute and capture results/usage. Announce the actual assignment first. These adapters disable tools; they do not implement desktop interaction, file editing, persistent resume, or automatic quota discovery. Use an available native adapter when those other capabilities are needed.
 
 For multi-agent work or a new channel, read [agent-routing.md](references/agent-routing.md). Inventory each reachable executor's strengths, weaknesses, tools, data access, authentication, exact model, effort, quota pool, observed outcomes, and freshness. Treat model-family role suggestions as starting hypotheses; update them from actual accepted tasks.
 

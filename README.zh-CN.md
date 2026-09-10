@@ -1,0 +1,88 @@
+# Agent Brain: lowest budget and highest work efficiency
+
+[English](README.md) | **简体中文**
+
+为 Codex 及支持 `SKILL.md` 的 Agent 编写的多 Agent 中心调度 skill。简称 **Agent Brain**。
+
+我们的目标是在保证任务质量的前提下，尽量减少额度消耗和完成时间。实际效果会因任务、模型和可用额度而不同。主控、执行者、上下文传递、验收和重试都计入成本。简单任务默认一个执行者；只有收益足够时才转交或并行。
+
+## 我们自己的工作方法
+
+执行前，主控会先用大白话告诉你：**安排哪个模型、通过哪个入口、准备做什么、为什么选它**。中途新增 Agent 或换模型，也会先说一声；完成后说明实际调用了谁、做成了什么。这是进度告知，不需要你反复确认。由主控直接处理时也会说明，不编造当前模型名称。
+
+主控将任务按下面这条流程执行：**定义交付 → 筛选执行者 → 精简交接 → 调用执行 → 定向修复 → 验收记账**。下表描述主控的工作约定；`brain.py plan` 只负责选人。具体步骤、数据格式和完整例子都放在本仓库，使用时无需阅读上游项目。
+
+| 环节 | 具体怎么做 | 留下什么结果 |
+| --- | --- | --- |
+| 筛选执行者 | 先检查任务能力、渠道和质量要求，再检查共享额度；最后比较完整任务成本，数据不足时按明确的偏好排序 | 选中的 Agent、具体模型、渠道、额度池及其他候选被排除的原因 |
+| 精简交接 | 固定保留目标、验收、权限、错误和文件范围；成功日志收缩为摘要，相关代码局部读取 | 一份可以直接执行的短任务包，以及可追溯的原始证据 |
+| 安排执行 | 研究结果交给实现者，有依赖的顺序做；独立工作分配不同文件或工作树 | 会话 ID、执行状态、文件归属和返回结果 |
+| 定向修复 | 缺上下文就补上下文；缺权限就处理权限；推理确实卡住才升级那个子问题 | 已完成部分保留，不让更贵模型整项重做 |
+| 验收记账 | 检查交付，再汇总主控、执行、审查和重试；未知用量明确留空 | 按任务、模型、额度池和单位区分的已知消耗，用于改善下次选择 |
+
+例如修复一个金额计算错误：先把失败用例、相关代码和允许修改的文件交给合适的编码 Agent。其他 Agent 不必都参与。遇到难以判断的货币规则时，再把那个问题和证据交给适合复杂推理的模型，结论返回原来的实现会话，最后由主控验收。
+
+这套步骤已写入 [skill 正文](skills/agent-brain/SKILL.md) 和 [执行手册](skills/agent-brain/references/operating-playbook.md)。模型分工的起点见 [能力与局限表](skills/agent-brain/references/agent-routing.md)，之后用实际任务表现修正。
+
+## 已实现的本地工具
+
+`brain.py` 使用 Python 3.10+ 标准库，不需要安装第三方依赖，不发起模型请求。以下命令在仓库根目录运行：
+
+```sh
+# 用虚构档案演示选人：返回 demo-terra，并解释其他候选为什么被排除
+python skills/agent-brain/scripts/brain.py plan skills/agent-brain/assets/demo.plan.json
+
+# 用虚构事件演示记账：未知费用保持 null，不混加不同模型和额度池
+python skills/agent-brain/scripts/brain.py account skills/agent-brain/assets/demo.usage.json
+
+# 从你已有的本地 UTF-8 日志提取关键片段；这里的 1 应替换为真实退出码
+python skills/agent-brain/scripts/brain.py digest work/raw.log --exit-code 1
+```
+
+示例档案仅用于离线演示，不能代表实际连接、模型能力或剩余额度。真实使用时，主控根据已验证的渠道状态填写任务和档案，运行选人逻辑后，再通过当前可用的 Agent 工具执行。`plan` 本身不会派发任务。
+
+日志工具输出原文件路径、哈希、行号、退出状态及省略标记；失败证据不完整时会要求回查原文。记账工具拒绝重复事件、累计计数和包含子调用的父级汇总，避免常见重复计算。三项工具的数据约定见 [执行手册](skills/agent-brain/references/operating-playbook.md)。
+
+## 能做什么
+
+- 通过 `dispatch.py` 实际调用已安装的 Claude Code 和 Grok CLI，执行单次文字任务，并自动保存回答和工具报告的用量。这两个适配器未开放文件修改、桌面控制或持久会话续接。用法见 [CLI 调用说明](skills/agent-brain/references/dispatch-cli.md)。
+- 为每个 Agent 建立能力档案：擅长任务、已知局限、工具与文件访问、调用渠道、具体模型、推理强度和共享额度池。
+- 区分 Claude 的 Haiku／Sonnet／Opus、Codex 的 Luna／Terra／Sol，以及 Google、Grok 等实际可用模型。型号与能力以当前环境为准。
+- 为主控已有工具约定派发、取结果、续接和取消的流程。内置 CLI 程序实现单次文字调用与超时清理，尚未实现持久续接或通用取消接口。
+- 有依赖的任务顺序执行，独立任务按收益决定并行；用独立目录防止覆盖，由一个负责人整合验收。
+- 搜索后局部读取，压缩冗长输出，保留错误和可追溯原文。
+- 使用短任务包，避免每个子 Agent 重读整段聊天。
+- 按能力和成本选择执行方式，确认额度耗尽后停止无效重试。
+- 区分现金支出、费用估算、订阅额度与时间，不承诺固定节省比例。
+
+它包含调度指令、本地选人和记账工具，以及可以执行单次文字任务的 CLI 调用程序。**桌面连接、文件修改适配、持久会话续接和自动读取额度还需要继续接入。** 模型能力、额度与计费规则从实际环境确认。
+
+## 安装与使用
+
+实际调用时，先准备 UTF-8 提示词文件、已存在的工作目录和 CLI 程序路径。下方程序路径需要替换为实际位置；Windows 使用真正的 `.exe`。输出目录必须是新目录。主控先向你说明模型和分工，再执行：
+
+```sh
+python skills/agent-brain/scripts/dispatch.py --adapter claude-code --executable /path/to/claude --model sonnet --effort low --workspace work/isolated --prompt-file work/review.txt --output-dir work/run-001 --task-id review-english --pool verified-claude-pool
+```
+
+这条命令会实际调用模型并消耗对应渠道的额度，保存状态、回答、原始输出和规范化用量。Grok 使用 `--adapter grok`，配上它的实际程序路径和可用型号。准备步骤与限制见 [调用说明](skills/agent-brain/references/dispatch-cli.md)。
+
+将 `skills/agent-brain` 文件夹复制到你的 Codex 技能目录：`$CODEX_HOME/skills/agent-brain`；未设置 `CODEX_HOME` 时通常是 `~/.codex/skills/agent-brain`。其他客户端请放入其支持的技能目录。刷新技能列表或开始新会话。
+
+示例：
+
+> 使用 $agent-brain 完成这个任务。先比较可用 Agent 的能力、局限与额度，安排合适的执行者；需要时让另一个 Agent 提供互补审查，不开启额外付费。
+
+> 使用 $agent-brain 检查这次多 Agent 工作是否划算，区分实际用量、费用估算与尚未测量的部分。
+
+技能正文按需加载；调度、交接或核算时读取对应的参考文件。20% 剩余额度仅为可配置的起始建议，不代表已启用自动监控。
+
+## 验证范围
+
+本地辅助代码包含 15 项自动化测试，覆盖能力筛选、共享额度、指定模型、过期数据、完整成本排序、日志失败证据和重复记账。运行 `python evaluations/test_brain.py`。另有独立 Luna 执行者完成的 6 个模拟调度场景评估，参见 [评估用例](evaluations/scenarios.md) 和 [评估记录](evaluations/results.md)。这些是逻辑与行为检查；实际节省效果需要在真实任务中测量。
+
+CLI 适配器另有 8 项离线测试；用 `python -m unittest discover -s evaluations -p "test_*.py"` 运行全部 23 项。另完成两次真实 README 检查，成功通过适配器取得回答和用量，见 [CLI 验证记录](evaluations/dispatch-results.md)。这只验证有限的文字任务，不代表桌面已接通或已经证明省钱。
+
+## 来源与许可
+
+操作流程、Python 辅助代码和测试由本项目编写。[设计取舍与参考](SOURCES.md) 记录哪些思路启发了哪些具体实现。运行与使用不依赖这些上游项目。原创内容使用 MIT 许可；上游项目各自遵循其原有许可。

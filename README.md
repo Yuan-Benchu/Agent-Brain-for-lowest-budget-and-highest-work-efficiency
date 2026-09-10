@@ -1,75 +1,88 @@
 # Agent Brain: lowest budget and highest work efficiency
 
-**简体中文** | [English](README.en.md)
+**English** | [简体中文](README.zh-CN.md)
 
-为 Codex 及支持 `SKILL.md` 的 Agent 编写的多 Agent 中心调度 skill。简称 **Agent Brain**。
+A central coordination skill for Codex and other agents that support `SKILL.md`. Short name: **Agent Brain**.
 
-我们的目标是在保证任务质量的前提下，尽量减少额度消耗和完成时间。实际效果会因任务、模型和可用额度而不同。主控、执行者、上下文传递、验收和重试都计入成本。简单任务默认一个执行者；只有收益足够时才转交或并行。
+Our goal is to reduce quota consumption and completion time while meeting task quality requirements. Results vary with the task, models, and available quota. Costs include the coordinator, workers, context transfer, acceptance checks, and retries. Simple tasks use one executor by default; delegation or parallel work is justified only when the benefits outweigh the overhead.
 
-## 我们自己的工作方法
+## Our operating method
 
-Agent Brain 将任务按下面这条流程执行：**定义交付 → 筛选执行者 → 精简交接 → 调用执行 → 定向修复 → 验收记账**。具体步骤、数据格式和完整例子都放在本仓库，使用时无需阅读上游项目。
+Before starting, the coordinator tells you in plain language **which model and channel will do what, and why**. It announces any added worker or model switch before dispatch, then reports what actually ran and what it completed. This is a progress update, not a repeated approval request. When it works directly, it says so rather than inventing a model identity.
 
-| 环节 | 具体怎么做 | 留下什么结果 |
+The coordinator follows this workflow: **define delivery → select an executor → prepare a concise handoff → dispatch → repair the specific problem → accept and account**. The table describes the coordinator's responsibilities; `brain.py plan` only selects candidates. Procedures, input formats, and examples live in this repository; using the skill does not require reading upstream projects.
+
+| Stage | Concrete action | Result |
 | --- | --- | --- |
-| 筛选执行者 | 先检查任务能力、渠道和质量要求，再检查共享额度；最后比较完整任务成本，数据不足时按明确的偏好排序 | 选中的 Agent、具体模型、渠道、额度池及其他候选被排除的原因 |
-| 精简交接 | 固定保留目标、验收、权限、错误和文件范围；成功日志收缩为摘要，相关代码局部读取 | 一份可以直接执行的短任务包，以及可追溯的原始证据 |
-| 安排执行 | 研究结果交给实现者，有依赖的顺序做；独立工作分配不同文件或工作树 | 会话 ID、执行状态、文件归属和返回结果 |
-| 定向修复 | 缺上下文就补上下文；缺权限就处理权限；推理确实卡住才升级那个子问题 | 已完成部分保留，不让更贵模型整项重做 |
-| 验收记账 | 检查交付，再汇总主控、执行、审查和重试；未知用量明确留空 | 按任务、模型、额度池和单位区分的已知消耗，用于改善下次选择 |
+| Select | Check capabilities, channel, quality requirements, and shared quotas before comparing whole-task costs; use explicit preferences when costs are not comparable | Selected agent, model, channel, pool, and reasons for excluding alternatives |
+| Prepare | Preserve objectives, acceptance, permissions, errors, and file scope; summarize successful logs and retrieve relevant code sections | An actionable task packet with retrievable original evidence |
+| Dispatch | Feed research into implementation; sequence dependencies and isolate independent writes | Session IDs, execution state, file ownership, and returned results |
+| Repair | Restore missing context, resolve access issues, or escalate only the subproblem that needs stronger reasoning | Completed work retained instead of restarting the entire task on a more expensive model |
+| Accept and account | Check delivery, then account for coordination, execution, review, and retries; retain unknown measurements | Known consumption grouped by task, model, pool, and unit to inform future selection |
 
-例如修复一个金额计算错误：先把失败用例、相关代码和允许修改的文件交给合适的编码 Agent。其他 Agent 不必都参与。遇到难以判断的货币规则时，再把那个问题和证据交给适合复杂推理的模型，结论返回原来的实现会话，最后由主控验收。
+For a monetary rounding bug, send the failing example, relevant code, and allowed files to a suitable coding agent. Other agents need not participate. If a currency rule requires deeper reasoning, send that question and evidence to an appropriate model, return the finding to the implementation session, and have the coordinator check acceptance.
 
-这套步骤已写入 [skill 正文](skills/agent-brain/SKILL.md) 和 [执行手册](skills/agent-brain/references/operating-playbook.md)。模型分工的起点见 [能力与局限表](skills/agent-brain/references/agent-routing.md)，之后用实际任务表现修正。
+These procedures are implemented in the [skill instructions](skills/agent-brain/SKILL.md) and [operating playbook](skills/agent-brain/references/operating-playbook.md). Start with the [capability and limitation table](skills/agent-brain/references/agent-routing.md), then adjust assignments using actual task outcomes.
 
-## 已实现的本地工具
+## Implemented local helpers
 
-`brain.py` 使用 Python 3.10+ 标准库，不需要安装第三方依赖，不发起模型请求。以下命令在仓库根目录运行：
+`brain.py` uses the Python 3.10+ standard library, requires no third-party dependencies, and makes no model requests. Run these commands from the repository root:
 
 ```sh
-# 用虚构档案演示选人：返回 demo-terra，并解释其他候选为什么被排除
+# Select from fictional profiles: returns demo-terra with exclusion reasons
 python skills/agent-brain/scripts/brain.py plan skills/agent-brain/assets/demo.plan.json
 
-# 用虚构事件演示记账：未知费用保持 null，不混加不同模型和额度池
+# Account for fictional events: unknown costs stay null; models and pools stay separate
 python skills/agent-brain/scripts/brain.py account skills/agent-brain/assets/demo.usage.json
 
-# 从你已有的本地 UTF-8 日志提取关键片段；这里的 1 应替换为真实退出码
+# Extract evidence from an existing local UTF-8 log; replace 1 with its real exit code
 python skills/agent-brain/scripts/brain.py digest work/raw.log --exit-code 1
 ```
 
-示例档案仅用于离线演示，不能代表实际连接、模型能力或剩余额度。真实使用时，主控根据已验证的渠道状态填写任务和档案，运行选人逻辑后，再通过当前可用的 Agent 工具执行。`plan` 本身不会派发任务。
+The fixtures are offline examples, not evidence of real connections, capabilities, or remaining quota. For real work, the coordinator supplies verified channel observations and task requirements, runs selection, then dispatches through available agent tools. `plan` itself does not dispatch work.
 
-日志工具输出原文件路径、哈希、行号、退出状态及省略标记；失败证据不完整时会要求回查原文。记账工具拒绝重复事件、累计计数和包含子调用的父级汇总，避免常见重复计算。三项工具的数据约定见 [执行手册](skills/agent-brain/references/operating-playbook.md)。
+The log helper returns a source path, hash, line numbers, exit state, and omission indicators. Incomplete failure evidence requires source review. Accounting rejects duplicate events, cumulative counters, and parent totals containing child calls. See the [playbook](skills/agent-brain/references/operating-playbook.md) for all three input contracts.
 
-## 能做什么
+## What it does
 
-- 为每个 Agent 建立能力档案：擅长任务、已知局限、工具与文件访问、调用渠道、具体模型、推理强度和共享额度池。
-- 区分 Claude 的 Haiku／Sonnet／Opus、Codex 的 Luna／Terra／Sol，以及 Google、Grok 等实际可用模型。型号与能力以当前环境为准。
-- 统一派发、获取结果、续接和取消的工作流程；不支持的动作明确标记。
-- 有依赖的任务顺序执行，独立任务按收益决定并行；用独立目录防止覆盖，由一个负责人整合验收。
-- 搜索后局部读取，压缩冗长输出，保留错误和可追溯原文。
-- 使用短任务包，避免每个子 Agent 重读整段聊天。
-- 按能力和成本选择执行方式，确认额度耗尽后停止无效重试。
-- 区分现金支出、费用估算、订阅额度与时间，不承诺固定节省比例。
+- Executes bounded text tasks through installed Claude Code and Grok CLIs using `dispatch.py`, capturing responses and reported usage. These adapters do not expose file-editing tools, desktop control, or persistent resume. See [CLI dispatch](skills/agent-brain/references/dispatch-cli.md).
+- Builds a capability profile for each agent: suitable tasks, known limitations, tools and file access, execution channel, exact model, reasoning effort, and shared quota pool.
+- Distinguishes Claude Haiku / Sonnet / Opus, Codex Luna / Terra / Sol, and available Google and Grok models. Model availability and capabilities come from the current environment.
+- Defines dispatch, result collection, continuation, and cancellation conventions for available host tools. The bundled CLI helper implements one-shot text execution and timeout cleanup; it does not implement persistent continuation or a general cancellation API.
+- Runs dependent tasks in order and parallelizes independent work when worthwhile. Separate workspaces prevent conflicting writes, and one integrator combines and validates results.
+- Searches before reading relevant sections, filters verbose output, and preserves errors and retrievable original evidence.
+- Uses concise task packets so each worker does not reread the entire conversation.
+- Selects execution methods by capability and cost, and stops ineffective retries when quota exhaustion is confirmed.
+- Separates cash spending, estimated costs, subscription quota, and time, without promising a fixed savings percentage.
 
-它包含调度指令和本地辅助代码，实际派发使用主控已有的工具。**桌面应用连接和后台常驻服务仍需相应适配。** 模型能力、额度与计费规则从实际环境确认。
+The skill includes dispatch instructions, local planning/accounting tools, and a CLI helper for one-shot text tasks. **Desktop connections, file-editing adapters, persistent resume, and automatic quota retrieval remain further work.** Model capabilities, quotas, and billing rules come from the actual environment.
 
-## 安装与使用
+## Installation and usage
 
-将 `skills/agent-brain` 文件夹复制到你的 Codex 技能目录：`$CODEX_HOME/skills/agent-brain`；未设置 `CODEX_HOME` 时通常是 `~/.codex/skills/agent-brain`。其他客户端请放入其支持的技能目录。刷新技能列表或开始新会话。
+To execute through the bundled adapter, prepare a UTF-8 prompt, an existing workspace, and the installed CLI's executable path. Replace the example executable below; use the actual `.exe` on Windows. The output directory must be new. The coordinator announces the model and assignment before running this command:
 
-示例：
+```sh
+python skills/agent-brain/scripts/dispatch.py --adapter claude-code --executable /path/to/claude --model sonnet --effort low --workspace work/isolated --prompt-file work/review.txt --output-dir work/run-001 --task-id review-english --pool verified-claude-pool
+```
 
-> 使用 $agent-brain 完成这个任务。先比较可用 Agent 的能力、局限与额度，安排合适的执行者；需要时让另一个 Agent 提供互补审查，不开启额外付费。
+This command actually calls the model and consumes its channel's allowance. It saves status, answer, raw output, and normalized usage in the output directory. For Grok, use `--adapter grok` with its executable and an available model. The [adapter guide](skills/agent-brain/references/dispatch-cli.md) explains setup and limits.
 
-> 使用 $agent-brain 检查这次多 Agent 工作是否划算，区分实际用量、费用估算与尚未测量的部分。
+Copy the `skills/agent-brain` folder into your Codex skills directory: `$CODEX_HOME/skills/agent-brain`, typically `~/.codex/skills/agent-brain` when `CODEX_HOME` is unset. For other clients, use their supported skill directory. Refresh the skill list or start a new session.
 
-技能正文按需加载；调度、交接或核算时读取对应的参考文件。20% 剩余额度仅为可配置的起始建议，不代表已启用自动监控。
+Example prompts:
 
-## 验证范围
+> Use $agent-brain to complete this task. Compare the available agents' capabilities, limitations, and quotas, then assign a suitable executor. Add a complementary reviewer when useful, without enabling additional paid usage.
 
-本地辅助代码包含 15 项自动化测试，覆盖能力筛选、共享额度、指定模型、过期数据、完整成本排序、日志失败证据和重复记账。运行 `python evaluations/test_brain.py`。另有独立 Luna 执行者完成的 6 个模拟调度场景评估，参见 [评估用例](evaluations/scenarios.md) 和 [评估记录](evaluations/results.md)。这些是逻辑与行为检查；实际节省效果需要在真实任务中测量。
+> Use $agent-brain to assess whether this multi-agent workflow was cost-effective. Distinguish actual usage, cost estimates, and components that have not been measured.
 
-## 来源与许可
+Load skill instructions as needed and consult the relevant references for routing, handoffs, or accounting. The 20% remaining-quota threshold is only a configurable starting suggestion, not an activated monitor.
 
-操作流程、Python 辅助代码和测试由本项目编写。[设计取舍与参考](SOURCES.md) 记录哪些思路启发了哪些具体实现。运行与使用不依赖这些上游项目。原创内容使用 MIT 许可；上游项目各自遵循其原有许可。
+## Validation scope
+
+The helper code includes 15 automated tests covering capability filtering, shared quotas, explicit model choices, stale observations, whole-task cost ranking, failure evidence, and duplicate accounting. Run `python evaluations/test_brain.py`. An independent Luna worker also completed six simulated dispatch decisions; see the [scenarios](evaluations/scenarios.md) and [evaluation record](evaluations/results.md). These check logic and behavior; actual savings require measurement on real tasks.
+
+The CLI adapter adds 8 offline tests; run all 23 with `python -m unittest discover -s evaluations -p "test_*.py"`. Two real README review calls also returned results and usage through the adapter. See [CLI validation](evaluations/dispatch-results.md). These limited text-task checks do not establish desktop access or cost savings.
+
+## Sources and license
+
+The operating procedure, Python helpers, and tests were written for this project. [Design decisions and references](SOURCES.md) (Chinese) maps the ideas that informed specific implementations. Using this skill does not depend on those upstream projects. Original content is MIT licensed; upstream projects retain their respective licenses.
